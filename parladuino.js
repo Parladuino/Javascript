@@ -1,21 +1,22 @@
 ﻿(function (parladuino) {
 
-
+    // lista de acciones disponibles
     parladuino.actions = {
-        NONE:0,
-        REPLY_TO_ID:1,
-        REPLY_TO_GROUP:2,
-        WRITE_TO_ID_AND_REPLY_TO_ID:3,
-        WRITE_TO_ID_AND_REPLY_TO_GROUP:4,
-        WRITE_TO_GROUP_AND_REPLY_TO_ID:5,
-        WRITE_TO_GROUP_AND_REPLY_TO_GROUP:6,
-        WRITE_TO_ID:7,
-        WRITE_TO_GROUP:8,
-        RESPOND_TO_ID:9,
-        RESPOND_TO_GROUP:10
+        NONE: 0,
+        REPLY_TO_ID: 1,
+        REPLY_TO_GROUP: 2,
+        WRITE_TO_ID_AND_REPLY_TO_ID: 3,
+        WRITE_TO_ID_AND_REPLY_TO_GROUP: 4,
+        WRITE_TO_GROUP_AND_REPLY_TO_ID: 5,
+        WRITE_TO_GROUP_AND_REPLY_TO_GROUP: 6,
+        WRITE_TO_ID: 7,
+        WRITE_TO_GROUP: 8,
+        RESPOND_TO_ID: 9,
+        RESPOND_TO_GROUP: 10
     };
 
-
+    /////////////////////            PINES 
+    // constructor 
     parladuino.genericPin = function (pGenPin) {
         this.p = 0;
         this.n = "";
@@ -29,17 +30,18 @@
         }
     }
 
+    // get y set
     parladuino.genericPin.prototype = {
         get name() { return this.n },
         set name(pVal) { this.n = pVal },
         get pin() { return this.p },
         set pin(pVal) { this.p = pVal },
         get value() { return this.v },
-        set value(pVal) {
-            this.v = Number(pVal);
-        }
+        set value(pVal) { this.v = Number(pVal) }
     }
 
+    //////////////////////        MENSAJES
+    // constructor
     parladuino.message = function (pMsg) {
         this.fi = "";
         this.fg = "";
@@ -63,12 +65,7 @@
         }
 
     }
-
-    parladuino.eventArgs = function (evt,pMessage) {
-        this.event = evt;
-        this.message = pMessage;
-    }
-
+    // get y set
     parladuino.message.prototype = {
         get fromID() { return this.fi },
         set fromID(pVal) { this.fi = pVal },
@@ -93,10 +90,17 @@
 
     }
 
-    parladuino.WebSocket = function () {
+    ///  Argumento para eventos
+    parladuino.eventArgs = function (evt, pMessage) {
+        this.event = evt;
+        this.message = pMessage;
+    }
 
+    
+    //    Dispositivo virtual
+    parladuino.device = function () {
 
-
+        // objeto conexion
         this.connection = {
             publicKey: "",
             privateKey: "",
@@ -116,65 +120,102 @@
 
         }
 
+        // objeto websocket
         this.ws = null;
 
+        // envia un mensaje
         this.send = function (pMessage) {
             if (this.ws != null) {
                 this.ws.send(JSON.stringify(pMessage))
             }
         }
 
+        // cierra la conexion
         this.close = function () {
             if (this.ws != null) {
                 this.ws.close();
             }
         }
 
-
+        // conecta con parladuino
         this.connect = function (pConnection) {
+
+            // selecciona la conexion
             if (pConnection) {
                 for (var n in pConnection) {
                     this.connection[n] = pConnection[n];
                 }
             }
+
+            // guarda la conexion 
             var that = this;
+
             $.ajax({
+
                 url: "http://www.mind-tech.com.ar//ParlaSocket/api/Key",
+
+                // si la conexion es exitosa y trajo las credenciales de api de Parladuino
                 success: function (creadential) {
+
+                    // encripta la clave privada 
                     var crypto = CryptoJS.SHA1(creadential + that.connection.privateKey)
+
+                    // conecta con web socket de Parladuino
                     var ws = new WebSocket("ws://mind-tech.com.ar//ParlaSocket/api/Ws?user=" + that.connection.publicKey + "&pass=" + crypto + "&group=" + that.connection.group + "&ID=" + that.connection.ID);
-                    ws.onopen = function (evt) { that.connection.onOpen(that, new parladuino.eventArgs(evt,null)) };
+
+                    // al abrir la conexion del web soket
+                    ws.onopen = function (evt) { that.connection.onOpen(that, new parladuino.eventArgs(evt, null)) };
+
+                    // cuando llega un mensaje a traves del web socket
                     ws.onmessage = function (evt) {
                         var stringMessage = evt.data.replace(/[\n\r\0]/g, '');
                         var msg = JSON.parse(stringMessage);
                         if (msg) {
+
+                            // dos tipos de mensaje
                             if (msg.user) {
-                                that.connection.onConnectionMessage(that, new parladuino.eventArgs(evt,msg));
+                                // mensaje de conexion
+                                that.connection.onConnectionMessage(that, new parladuino.eventArgs(evt, msg));
                             }
                             else {
-                                that.connection.onMessage(that, new parladuino.eventArgs(evt,new parladuino.message(msg)));
+                                // mensaje de datos
+                                that.connection.onMessage(that, new parladuino.eventArgs(evt, new parladuino.message(msg)));
                             }
                         }
                     };
+
+                    // cuando hay un error web socket
                     ws.onerror = function (evt) { that.connection.onError(that, new parladuino.eventArgs(evt, null)) }
+
+                    // al cerrar conexion del web socket
                     ws.onclose = function (evt) {
                         that.connection.onClose(that, new parladuino.eventArgs(evt, null));
+
+                        // reconecta automaticamente
                         if (that.connection.autoconnect) {
                             that.connect();
                         }
                     }
+
+                    // guardo el web socket
                     that.ws = ws
                 },
+
+                // no se pudo conectar con Parladuino para traer las credenciales
                 error: function (evt) { that.connection.onCredentialError(that, new parladuino.eventArgs(evt, null)) }
+
             });
         }
 
 
-       
+        // aplica el mensaje al device segun la accion
         this.apply = function (pMessage) {
             var i = 0;
-            
+
+            // para pines analogos
             for (var i in pMessage.analogs) {
+
+                // la accion indica un write
                 if (pMessage.action > parladuino.actions.REPLY_TO_GROUP && pMessage.action < parladuino.actions.RESPOND_TO_ID) {
                     this.connection.onAnalogWrite(pMessage.analogs[i]);
                 }
@@ -184,11 +225,16 @@
                 i++;
             }
 
-            i=0;
+            i = 0;
+
+            // para pines dgigitales
             for (var i in pMessage.digitals) {
+
+                // la accion indica un write
                 if (pMessage.action > parladuino.actions.REPLY_TO_GROUP && pMessage.action < parladuino.actions.RESPOND_TO_ID) {
                     this.connection.onDigitalWrite(pMessage.digitals[i]);
                 }
+
                 var readPin = this.connection.onDigitalRead(pMessage.digitals[i]);
                 pMessage.digitals[i].value = readPin.value;
                 pMessage.digitals[i].name = readPin.name;
@@ -196,22 +242,31 @@
             }
         }
 
+        // responde el mensaje segun la accion al remitente
         this.reply = function (pMessage) {
+
+            // la accion implica una respuesta
             if (pMessage.action > parladuino.actions.NONE && pMessage.action < parladuino.actions.WRITE_TO_ID) {
 
+                // toma el ID del remitente
                 pMessage.toID = pMessage.fromID;
                 pMessage.toGroup = ""
-                pMessage.fromID= this.connection.ID;
+                pMessage.fromID = this.connection.ID;
 
-
-                // reply to group
+                // la accion implica una repuesta al grupo
                 if (pMessage.action == parladuino.actions.REPLY_TO_GROUP || pMessage.action == parladuino.actions.WRITE_TO_ID_AND_REPLY_TO_GROUP || pMessage.action == parladuino.actions.WRITE_TO_GROUP_AND_REPLY_TO_GROUP) {
+
+                    // toma el Grupo del remitente
                     pMessage.toGroup = pMessage.fromGroup
                     pMessage.action = parladuino.actions.RESPOND_TO_GROUP;
+
                 } else {
+
+                    // la accion implica una repuesta al ID
                     pMessage.action = parladuino.actions.RESPOND_TO_ID;
                 }
 
+                // envia el mensaje reultante
                 this.send(pMessage);
 
             }
