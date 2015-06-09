@@ -96,29 +96,35 @@
         this.message = pMessage;
     }
 
+    parladuino.connection = function (pConnection) {
+        this.publicKey="";
+        this.privateKey= "";
+        this.group= "";
+        this.ID= "";
+        this.onOpen= function () { };
+        this.onMessage= function () { };
+        this.onConnectionMessage= function () { };
+        this.onError= function () { };
+        this.onClose= function () { };
+        this.onCredentialError= function () { };
+        this.onDigitalWrite= function () { };
+        this.onAnalogWrite= function () { };
+        this.onDigitalRead= function () { };
+        this.onAnalogRead= function () { };
+        this.autoconnect = true
+
+        if (pConnection) {
+            for (var prop in pConnection) {
+                this[prop] = pConnection[prop]
+            }
+        }
+    }
     
     //    Dispositivo virtual
     parladuino.device = function () {
 
         // objeto conexion
-        this.connection = {
-            publicKey: "",
-            privateKey: "",
-            group: "",
-            ID: "",
-            onOpen: function () { },
-            onMessage: function () { },
-            onConnectionMessage: function () { },
-            onError: function () { },
-            onClose: function () { },
-            onCredentialError: function () { },
-            onDigitalWrite: function () { },
-            onAnalogWrite: function () { },
-            onDigitalRead: function () { },
-            onAnalogRead: function () { },
-            autoconnect: true
-
-        }
+        this.connection = null;
 
         // objeto websocket
         this.ws = null;
@@ -141,11 +147,7 @@
         this.connect = function (pConnection) {
 
             // selecciona la conexion
-            if (pConnection) {
-                for (var n in pConnection) {
-                    this.connection[n] = pConnection[n];
-                }
-            }
+            if (pConnection) {this.connection = pConnection}
 
             // guarda la conexion 
             var that = this;
