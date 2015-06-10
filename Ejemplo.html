@@ -69,8 +69,8 @@
 
                     // si es un mensaje de respuesta a un mensaje enviado por este dispositivo previamente
                     if (e.message.action == parladuino.actions.RESPOND_TO_ID || e.message.action == parladuino.actions.RESPOND_TO_GROUP) {
-                        // aviso de mensaje respondido
-                        var luz = document.getElementById("luz").style.backgroundColor = (e.message.digitals[0].value == 0 ? "black" : "yellow")
+                        // el ha sido mensaje respondido
+                        document.getElementById("luz").style.backgroundColor = (e.message.digitals[0].value == 0 ? "black" : "yellow")
                     }
                     else {
                         // si es un menssaje enviado desde otro dispositivo
