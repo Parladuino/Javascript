@@ -121,10 +121,7 @@
         }
     }
 
-    this.onDigitalWrite = function () { };
-    this.onAnalogWrite = function () { };
-    this.onDigitalRead = function () { };
-    this.onAnalogRead = function () { };
+    
     
     //    Dispositivo virtual
     parladuino.device = function () {
@@ -230,8 +227,10 @@
                     this.onAnalogWrite(this,new parladuino.deviceEventArgs(pMessage.analogs[i]));
                 }
                 var readPin = this.onAnalogRead(this, new parladuino.deviceEventArgs(pMessage.analogs[i]));
-                pMessage.analogs[i].value = readPin.value;
-                pMessage.analogs[i].name = readPin.name;
+                if (readPin) {
+                    pMessage.analogs[i].value = readPin.value;
+                    pMessage.analogs[i].name = readPin.name;
+                }
                 i++;
             }
 
@@ -246,8 +245,10 @@
                 }
 
                 var readPin = this.onDigitalRead(this, new parladuino.deviceEventArgs(pMessage.digitals[i]));
-                pMessage.digitals[i].value = readPin.value;
-                pMessage.digitals[i].name = readPin.name;
+                if (readPin) {
+                    pMessage.digitals[i].value = readPin.value;
+                    pMessage.digitals[i].name = readPin.name;
+                }
                 i++;
             }
         }
@@ -282,6 +283,11 @@
             }
         }
 
+
+        this.onDigitalWrite = function () { };
+        this.onAnalogWrite = function () { };
+        this.onDigitalRead = function () { };
+        this.onAnalogRead = function () { };
     }
 
 })(window.parladuino = window.parladuino || {})
