@@ -90,10 +90,15 @@
 
     }
 
-    ///  Argumento para eventos
-    parladuino.eventArgs = function (evt, pMessage) {
+    ///  Argumento para eventos de conexión
+    parladuino.connectionEventArgs = function (evt, pMessage) {
         this.event = evt;
         this.message = pMessage;
+    }
+
+    ///  Argumento para eventos de lectura o escritura de pines
+    parladuino.deviceEventArgs = function (pPin) {
+        this.pin = pPin;
     }
 
     parladuino.connection = function (pConnection) {
@@ -107,10 +112,6 @@
         this.onError= function () { };
         this.onClose= function () { };
         this.onCredentialError= function () { };
-        this.onDigitalWrite= function () { };
-        this.onAnalogWrite= function () { };
-        this.onDigitalRead= function () { };
-        this.onAnalogRead= function () { };
         this.autoconnect = true
 
         if (pConnection) {
@@ -119,6 +120,11 @@
             }
         }
     }
+
+    this.onDigitalWrite = function () { };
+    this.onAnalogWrite = function () { };
+    this.onDigitalRead = function () { };
+    this.onAnalogRead = function () { };
     
     //    Dispositivo virtual
     parladuino.device = function () {
@@ -166,7 +172,7 @@
                     var ws = new WebSocket("ws://mind-tech.com.ar//ParlaSocket/api/Ws?user=" + that.connection.publicKey + "&pass=" + crypto + "&group=" + that.connection.group + "&ID=" + that.connection.ID);
 
                     // al abrir la conexion del web soket
-                    ws.onopen = function (evt) { that.connection.onOpen(that, new parladuino.eventArgs(evt, null)) };
+                    ws.onopen = function (evt) { that.connection.onOpen(that, new parladuino.connectionEventArgs(evt, null)) };
 
                     // cuando llega un mensaje a traves del web socket
                     ws.onmessage = function (evt) {
@@ -177,21 +183,21 @@
                             // dos tipos de mensaje
                             if (msg.user) {
                                 // mensaje de conexion
-                                that.connection.onConnectionMessage(that, new parladuino.eventArgs(evt, msg));
+                                that.connection.onConnectionMessage(that, new parladuino.connectionEventArgs(evt, msg));
                             }
                             else {
                                 // mensaje de datos
-                                that.connection.onMessage(that, new parladuino.eventArgs(evt, new parladuino.message(msg)));
+                                that.connection.onMessage(that, new parladuino.connectionEventArgs(evt, new parladuino.message(msg)));
                             }
                         }
                     };
 
                     // cuando hay un error web socket
-                    ws.onerror = function (evt) { that.connection.onError(that, new parladuino.eventArgs(evt, null)) }
+                    ws.onerror = function (evt) { that.connection.onError(that, new parladuino.connectionEventArgs(evt, null)) }
 
                     // al cerrar conexion del web socket
                     ws.onclose = function (evt) {
-                        that.connection.onClose(that, new parladuino.eventArgs(evt, null));
+                        that.connection.onClose(that, new parladuino.connectionEventArgs(evt, null));
 
                         // reconecta automaticamente
                         if (that.connection.autoconnect) {
@@ -204,7 +210,7 @@
                 },
 
                 // no se pudo conectar con Parladuino para traer las credenciales
-                error: function (evt) { that.connection.onCredentialError(that, new parladuino.eventArgs(evt, null)) }
+                error: function (evt) { that.connection.onCredentialError(that, new parladuino.connectionEventArgs(evt, null)) }
 
             });
         }
@@ -219,9 +225,9 @@
 
                 // la accion indica un write
                 if (pMessage.action > parladuino.actions.REPLY_TO_GROUP && pMessage.action < parladuino.actions.RESPOND_TO_ID) {
-                    this.connection.onAnalogWrite(pMessage.analogs[i]);
+                    this.onAnalogWrite(this,new parladuino.deviceEventArgs(pMessage.analogs[i]));
                 }
-                var readPin = this.connection.onAnalogRead(pMessage.analogs[i]);
+                var readPin = this.onAnalogRead(this, new parladuino.deviceEventArgs(pMessage.analogs[i]));
                 pMessage.analogs[i].value = readPin.value;
                 pMessage.analogs[i].name = readPin.name;
                 i++;
@@ -234,10 +240,10 @@
 
                 // la accion indica un write
                 if (pMessage.action > parladuino.actions.REPLY_TO_GROUP && pMessage.action < parladuino.actions.RESPOND_TO_ID) {
-                    this.connection.onDigitalWrite(pMessage.digitals[i]);
+                    this.onDigitalWrite(this, new parladuino.deviceEventArgs(pMessage.digitals[i]));
                 }
 
-                var readPin = this.connection.onDigitalRead(pMessage.digitals[i]);
+                var readPin = this.onDigitalRead(this, new parladuino.deviceEventArgs(pMessage.digitals[i]));
                 pMessage.digitals[i].value = readPin.value;
                 pMessage.digitals[i].name = readPin.name;
                 i++;
