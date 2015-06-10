@@ -138,6 +138,8 @@
         // envia un mensaje
         this.send = function (pMessage) {
             if (this.ws != null) {
+                pMessage.fromID = this.connection.ID;
+                pMessage.fromGroup = this.connection.group;
                 this.ws.send(JSON.stringify(pMessage))
             }
         }

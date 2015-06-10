@@ -1,0 +1,147 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Ejemplo Parladuino</title>
+
+    <script src="Scripts/parladuino.js"></script>
+
+    <script src="https://code.jquery.com/jquery-2.1.1.min.js"> </script>
+
+    <script src="http://crypto-js.googlecode.com/svn/tags/3.0.2/build/rollups/hmac-sha1.js"> </script>
+
+    <script src="http://crypto-js.googlecode.com/svn/tags/3.0.2/build/components/enc-base64-min.js"> </script>
+</head>
+<body>
+    <input type="button" id="connect" onclick="connect();" value="Connect" />
+
+    <div id="luz" style="width: 50px; height: 50px; background-color: black"></div>
+
+    <input type="button" id="Button1" onclick="on();" value="On" />
+
+    <input type="button" id="Button2" onclick="off();" value="Off" />
+
+    <script type="text/javascript">
+
+        // creamos un dispositivo virtual
+        var myDevice = new parladuino.device()
+
+        // creamos un mensaje a un supuesto arduino llamado 'luz_1' del grupo 'cocina'
+        var message = new parladuino.message()
+
+        message.toID = "luz_1"
+
+        message.toGroup = "cocina"
+
+        message.action = parladuino.actions.WRITE_TO_ID_AND_REPLY_TO_GROUP
+
+        // suponiendo que tiene un relé en el pin D5
+        var pinRele = new parladuino.genericPin();
+
+        pinRele.pin = 5
+
+        message.digitals[0] = pinRele
+
+
+        // conectamos con Parladuino
+        function connect() {
+
+            myDevice.connect(new parladuino.connection({
+
+                publicKey: "587439.......", // clave pública obtenida cuando se creo la cuenta en Parladuino 
+
+                privateKey: "1e9c4d.......", // clave privada obtenida cuando se creo la cuenta en Parladuino 
+
+                group: "control", // nombre del grupo al cual pertenece este dispositivo
+
+                ID: "PC_1", // Identificador único del dispositivo
+
+                onOpen: function (sender, e) {
+
+                    // mensaje de Parladuino avisando que mi dispositivo se encuentra conectado
+                    // El mensaje se encuentra en e.message y es del tipo 'connectionMessage'
+
+                },
+
+                onMessage: function (sender, e) {
+
+                    // se ha recibido un mensaje de otro dispositivo
+                    // el mensaje se encuentra en e.massage y es del tipo 'message'
+
+                    // si es un mensaje de respuesta a un mensaje enviado por este dispositivo previamente
+                    if (e.message.action == parladuino.actions.RESPOND_TO_ID || e.message.action == parladuino.actions.RESPOND_TO_GROUP) {
+                        // aviso de mensaje respondido
+                        var luz = document.getElementById("luz").style.backgroundColor = (e.message.digitals[0].value == 0 ? "black" : "yellow")
+                    }
+                    else {
+                        // si es un menssaje enviado desde otro dispositivo
+
+                        // aplicar acción del mensaje entrante a mi dispositivo
+                        sender.apply(e.message);
+
+                        // responder al destinatario del mensaje entrante
+                        sender.reply(e.message);
+                    }
+                },
+
+                onConnectionMessage: function (sender, e) {
+
+                    // mensaje de Parladuino confirmando la conexión de otro dispositivo
+                    // El mensaje se encuentra en e.message y es del tipo 'connectionMessage'
+
+                },
+
+                onError: function (sender, e) {
+
+                    // error en la conexión 
+
+                },
+
+                onClose: function (sender, e) {
+
+                    // se cerró una conexión
+
+                    // mensaje de Parladuino confirmando el cierre de conexión de este u otro dispositivo
+
+                    // El mensaje se encuentra en e.message y es del tipo 'connectionMessage'
+
+                },
+
+                onCredentialError: function (sender, e) {
+
+                    // no se pudieron obtener la credenciales necesaria del servidor de Parladuino
+
+                },
+
+
+                autoconnect: true // reconectar automaticamente en caso de corte
+
+            }));
+
+
+        }
+
+        // envia mensaje poniendo en 1 el pin D5
+        function on() {
+
+            message.digitals[0].value = 1
+
+            myDevice.send(message);
+
+        }
+
+        // envia mensaje poniendo en 0 el pin D5
+        function off() {
+
+            message.digitals[0].value = 0
+
+            myDevice.send(message);
+
+        }
+
+
+
+
+    </script>
+
+</body>
+</html>
